@@ -1,0 +1,130 @@
+---
+title: "superStoreDb"
+output: pdf_document
+---
+
+```{r}
+
+
+library(Hmisc)
+library(knitr)
+library(tidyverse)
+library(ggplot2) 
+library(gridExtra)
+library(mice)  
+library(corrplot)
+library(pROC)
+library(png) 
+library(xtable)
+library(caret)
+library(dplyr)
+library(reshape2)
+library(arules)
+library(randomForest)
+library(ggthemes)
+library(scales)
+library(rpart)
+library(class)
+library(ROSE)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(car)
+library(e1071)
+library(tinytex)
+library(fpc)
+library(data.table)
+
+
+```
+
+```{r}
+originalDataSet <- read.csv("./superstore_dataset2011-2015.csv")
+
+```
+
+```{r}
+ssds <- originalDataSet
+```
+
+```{r}
+head(ssds)
+str(ssds)
+summary(ssds)
+```
+
+```{r}
+library(stringr)
+ssds <- ssds%>%filter(str_count(Row.ID)<20)
+ssds <- ssds%>%filter(str_count(Order.ID)<20)
+ssds <- ssds%>%filter(str_count(Ship.Date)!=0)
+ssds <- ssds%>%filter(str_count(Sales)!=0)
+View(ssds)
+```
+
+character num to numeric type
+```{r}
+
+ssds$Sales<-as.numeric(ssds$Sales)
+ssds$Quantity<-as.numeric(ssds$Quantity)
+ssds$Discount<-as.numeric(ssds$Discount)
+ssds$Profit<-as.numeric(ssds$Profit)
+ssds$Shipping.Cost<-as.numeric(ssds$Shipping.Cost)
+
+```
+
+```{r}
+head(ssds)
+str(ssds)
+summary(ssds)
+```
+
+```{r}
+dataSetForPlot <- ssds%>%select(Sales, Quantity, Discount, Profit, Shipping.Cost)
+hist(dataSetForPlot)
+
+```
+
+
+```{r}
+pcap <- function(x){
+  for (i in which(sapply(x, is.numeric))) {
+    quantiles <- quantile( x[,i], c(.05, .95 ), na.rm =TRUE)
+    x[,i] = ifelse(x[,i] < quantiles[1] , quantiles[1], x[,i])
+    x[,i] = ifelse(x[,i] > quantiles[2] , quantiles[2], x[,i])}
+  x}
+
+ssds<-pcap(ssds)
+```
+
+```{r}
+ssds.2014<-ssds%>%filter(grepl("2014",ssds$Order.Date, fixed = TRUE))
+ssds.2013<-ssds%>%filter(grepl("2013",ssds$Order.Date, fixed = TRUE))
+ssds.2012<-ssds%>%filter(grepl("2012",ssds$Order.Date, fixed = TRUE))
+ssds.2011<-ssds%>%filter(grepl("2011",ssds$Order.Date, fixed = TRUE))
+```
+
+
+Convert Character date to Date type
+```{r}
+library(lubridate)
+convertCharDateToDate<-function(dsdt){
+  res = as.Date(parse_date_time(dsdt, c('mdy', 'ymd_hms')))
+  return(res)
+}
+
+ssds.2014$Order.Date<-convertCharDateToDate(ssds.2014$Order.Date)
+ssds.2013$Order.Date<-convertCharDateToDate(ssds.2013$Order.Date)
+ssds.2012$Order.Date<-convertCharDateToDate(ssds.2012$Order.Date)
+ssds.2011$Order.Date<-convertCharDateToDate(ssds.2011$Order.Date)
+
+ssds.2014$Ship.Date<-convertCharDateToDate(ssds.2014$Ship.Date)
+ssds.2013$Ship.Date<-convertCharDateToDate(ssds.2013$Ship.Date)
+ssds.2012$Ship.Date<-convertCharDateToDate(ssds.2012$Ship.Date)
+ssds.2011$Ship.Date<-convertCharDateToDate(ssds.2011$Ship.Date)
+
+```
+```{r}
+as.factor(ssds.2014$Ship.Mode)
+```
+

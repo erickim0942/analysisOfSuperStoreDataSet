@@ -1,0 +1,241 @@
+---
+title: "Assignment3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+################################################################################
+################################ Data Description ##############################
+################################################################################
+```
+# Data Description
+
+Variable Name | Description
+--------------|-------------
+Row ID        |
+Order ID      |
+Order Date    |
+Ship Date     |
+Ship Mode     |
+Customer ID   |
+Customer Name |
+Segment       |
+City          |
+State         |
+Country       |
+Postal Code   |
+Market        |
+Region        |
+Product ID    |
+Category      |
+Sub-Category  |
+Product Name  |
+Sales         |
+Quantity      |
+Discount      |
+Profit        |
+Shipping Cost | 
+Order Priority| 
+
+
+# Data Exploration
+
+```{r}
+###############################################################################
+############################# Data Exploration ################################
+###############################################################################
+```
+
+
+```{r}
+data=read.csv(file.choose(), header = TRUE, na.strings = c("NA","","#NA"))
+copy_data = data
+```
+
+```{r}
+# Delete Columns
+raw_data = copy_data[ , -c(2,6,7,12,15,18)]
+
+# Specify columns as dates
+raw_data$Order.Date = as.Date(raw_data$Order.Date,"%d/%m/%Y")
+raw_data$Ship.Date = as.Date(raw_data$Ship.Date,"%d/%m/%Y")
+```
+
+```{r}
+#check # of rows
+ncol(raw_data)
+nrow(raw_data)
+```
+
+```{r}
+#quickly preview data structure with HEAD(), STR(), and SUMMARY()
+head(raw_data,4)
+str(raw_data)
+summary(raw_data)
+```
+
+```{r}
+# Determine the number of unique values in some of the categorical variables
+n_Cities = unique(raw_data$City)
+n_States = unique(raw_data$State)
+n_Country = unique(raw_data$Country)
+n_Region = unique(raw_data$Region)
+
+n_Market = unique(raw_data$Market)
+n_Category = unique(raw_data$Category)
+n_SubCategory = unique(raw_data$Sub.Category)
+
+```
+
+
+```{r}
+# Look at frequency distribution for certain categorical variables
+
+barplot(table(raw_data$Market),
+        main = 'Market Frequency Plot',
+        ylab = 'Frequency',
+        )
+ 
+barplot(table(raw_data$Region),
+        main = 'Region Frequency Plot',
+        ylab = 'Frequency', las = 3
+        )
+
+barplot(table(raw_data$Order.Priority),
+        main = 'Order Priority Frequency Plot',
+        ylab = 'Frequency',
+        )
+
+barplot(table(raw_data$Segment),
+        main = 'Segment Frequency Plot',
+        ylab = 'Frequency',
+        )
+
+barplot(table(raw_data$Category),
+        main = 'Category Frequency Plot',
+        ylab = 'Frequency',
+        )
+
+barplot(table(raw_data$Sub.Category),
+        main = 'Sub-CategoryFrequency Plot',
+        ylab = 'Frequency', las = 3
+        )
+
+```
+
+
+```{r}
+############################################################################################################ Numeric Data Exploration ##########################
+################################################################################
+```
+
+```{r}
+# Let's retrieve a subset of the data table
+colNames <- c("Row.ID","Sales","Quantity","Discount","Profit","Shipping.Cost")
+numeric_data <- raw_data[colNames]
+```
+
+```{r}
+library(ggplot2)
+library(reshape2)
+
+# Observe the distribution of the data using histograms
+melt_data = melt(numeric_data, id.vars=c("Row.ID"))
+
+ggplot(data = melt_data, mapping = aes(x = value)) + geom_histogram(bins = 10) + facet_wrap(~variable, scales = 'free_x')
+```
+
+```{r}
+# Look in more details of profits
+min_profit = min(raw_data$Profit)
+max_profit = max(raw_data$Profit)
+
+plot(raw_data$Order.Date,raw_data$Profit,ylim = c(min_profit,max_profit),main = "Profit vs. Time")
+```
+
+```{r}
+# Look in more details Sales
+min_sales = min(raw_data$Sales)
+max_sales = max(raw_data$Sales)
+
+plot(raw_data$Order.Date,raw_data$Sales, ylim = c(min_sales,max_sales), main = "Sales vs Time")
+```
+
+```{r}
+library(corrplot)
+
+# Evaluate correlation between variables 
+cor_result <- cor(numeric_data)
+
+corrplot(cor_result, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+
+```
+
+```{r}
+############################################################################################################# Data Preparation #################################
+################################################################################
+```
+
+```{r}
+# Outlier Visualization for Sales
+boxplot(raw_data$Sales, las = 1)
+```
+
+```{r}
+# Outlier Visualization for Profit
+boxplot(raw_data$Profit, las = 1)
+```
+
+
+```{r}
+# Percentile Capping for outlier treatment
+pcap <- function(x){
+  for (i in which(sapply(x, is.numeric))) {
+    quantiles <- quantile( x[,i], c(.05, .95 ), na.rm =TRUE)
+    x[,i] = ifelse(x[,i] < quantiles[1] , quantiles[1], x[,i])
+    x[,i] = ifelse(x[,i] > quantiles[2] , quantiles[2], x[,i])}
+  x}
+
+```
+
+```{r}
+# Remove the row ID
+raw_data = raw_data[,-c(1)]
+```
+
+```{r}
+# Applying the percentile capping function
+raw_data = pcap(raw_data)
+```
+
+```{r}
+# Look in more details of profits
+min_profit = min(raw_data$Profit)
+max_profit = max(raw_data$Profit)
+
+plot(raw_data$Order.Date,raw_data$Profit,ylim = c(min_profit,max_profit),main = "Profit vs. Time")
+```
+
+```{r}
+# Look in more details Sales
+min_sales = min(raw_data$Sales)
+max_sales = max(raw_data$Sales)
+
+plot(raw_data$Order.Date,raw_data$Sales, ylim = c(min_sales,max_sales), main = "Sales vs Time")
+```
+
+```{r}
+################################################################################
+############################ Modelling #########################################
+################################################################################
+```
+
+```{r}
+#split = sample.split(raw_data, SplitRatio = 0.7)
+#train = subset(raw_data, split == TRUE)
+#test = subset(raw_data, split == FALSE)
+```
