@@ -59,8 +59,20 @@ ssds <- ssds%>%filter(str_count(Row.ID)<20)
 ssds <- ssds%>%filter(str_count(Order.ID)<20)
 ssds <- ssds%>%filter(str_count(Ship.Date)!=0)
 ssds <- ssds%>%filter(str_count(Sales)!=0)
-View(ssds)
+ssds$Row.ID<-NULL
+ssds$Order.ID<-NULL
+ssds$Customer.ID<-NULL
+head(ssds)
 ```
+categorical feature to factor
+```{r}
+ssds$Order.Priority<-as.factor(ssds$Order.Priority)
+ssds$Ship.Mode<-as.factor(ssds$Ship.Mode)
+
+ssds%>%select(Ship.Mode)
+
+```
+
 
 character num to numeric type
 ```{r}
@@ -71,6 +83,7 @@ ssds$Discount<-as.numeric(ssds$Discount)
 ssds$Profit<-as.numeric(ssds$Profit)
 ssds$Shipping.Cost<-as.numeric(ssds$Shipping.Cost)
 
+head(ssds%>%select(Sales,Quantity,Discount,Profit, Shipping.Cost))
 ```
 
 ```{r}
@@ -87,6 +100,8 @@ hist(dataSetForPlot)
 
 
 ```{r}
+print("before removing outlier")
+summary(ssds)
 pcap <- function(x){
   for (i in which(sapply(x, is.numeric))) {
     quantiles <- quantile( x[,i], c(.05, .95 ), na.rm =TRUE)
@@ -95,13 +110,18 @@ pcap <- function(x){
   x}
 
 ssds<-pcap(ssds)
+print("after removing outlier")
+summary(ssds)
 ```
 
+data splited by years
 ```{r}
 ssds.2014<-ssds%>%filter(grepl("2014",ssds$Order.Date, fixed = TRUE))
 ssds.2013<-ssds%>%filter(grepl("2013",ssds$Order.Date, fixed = TRUE))
 ssds.2012<-ssds%>%filter(grepl("2012",ssds$Order.Date, fixed = TRUE))
 ssds.2011<-ssds%>%filter(grepl("2011",ssds$Order.Date, fixed = TRUE))
+
+head(ssds.2014)
 ```
 
 
@@ -123,8 +143,13 @@ ssds.2013$Ship.Date<-convertCharDateToDate(ssds.2013$Ship.Date)
 ssds.2012$Ship.Date<-convertCharDateToDate(ssds.2012$Ship.Date)
 ssds.2011$Ship.Date<-convertCharDateToDate(ssds.2011$Ship.Date)
 
+head(ssds.2014)
 ```
+categorical features to factors
 ```{r}
-as.factor(ssds.2014$Ship.Mode)
+
+
+
+
 ```
 
