@@ -40,7 +40,7 @@ library(data.table)
 
 ```{r}
 originalDataSet <- read.csv("./superstore_dataset2011-2015.csv")
-
+set.seed(198)
 ```
 
 ```{r}
@@ -53,12 +53,16 @@ str(ssds)
 summary(ssds)
 ```
 
+Get US data
 ```{r}
 library(stringr)
 ssds <- ssds%>%filter(str_count(Row.ID)<20)
 ssds <- ssds%>%filter(str_count(Order.ID)<20)
+ssds <- ssds%>%filter(str_count(Order.Priority)<10)
 ssds <- ssds%>%filter(str_count(Ship.Date)!=0)
 ssds <- ssds%>%filter(str_count(Sales)!=0)
+ssds<-ssds%>%filter(Country=='United States')
+ssds<-ssds%>%filter(!is.na(ssds))
 View(ssds)
 ```
 
@@ -74,16 +78,34 @@ ssds$Shipping.Cost<-as.numeric(ssds$Shipping.Cost)
 ```
 
 ```{r}
+dataSetForPlot <- ssds%>%select(Sales, Quantity, Discount, Profit, Shipping.Cost)
+hist(dataSetForPlot)
+```
+
+cat to bin
+```{r}
 head(ssds)
-str(ssds)
-summary(ssds)
+ssds$Ship.Mode<-as.factor(ssds$Ship.Mode)
+ssds$Segment<-as.factor(ssds$Segment)
+ssds$City<-as.factor(ssds$City)
+ssds$State<-as.factor(ssds$State)
+ssds$Country<-as.factor(ssds$Country)
+ssds$Market<-as.factor(ssds$Market)
+ssds$Region<-as.factor(ssds$Region)
+ssds$Category<-as.factor(ssds$Category)
+ssds$Sub.Category<-as.factor(ssds$Sub.Category)
+ssds$Order.Priority<-as.factor(ssds$Order.Priority)
+
 ```
 
 ```{r}
-dataSetForPlot <- ssds%>%select(Sales, Quantity, Discount, Profit, Shipping.Cost)
-hist(dataSetForPlot)
-
+ssds$Row.ID<-NULL
+ssds$Order.ID<-NULL
+ssds$Customer.ID<-NULL
+ssds$Postal.Code<-NULL
 ```
+
+
 
 
 ```{r}
@@ -104,7 +126,6 @@ ssds.2012<-ssds%>%filter(grepl("2012",ssds$Order.Date, fixed = TRUE))
 ssds.2011<-ssds%>%filter(grepl("2011",ssds$Order.Date, fixed = TRUE))
 ```
 
-
 Convert Character date to Date type
 ```{r}
 library(lubridate)
@@ -112,7 +133,15 @@ convertCharDateToDate<-function(dsdt){
   res = as.Date(parse_date_time(dsdt, c('mdy', 'ymd_hms')))
   return(res)
 }
+```
 
+
+```{r}
+ssds$Order.Date<-convertCharDateToDate(ssds$Order.Date)
+ssds$Ship.Date<-convertCharDateToDate(ssds$Ship.Date)
+```
+
+```{r}
 ssds.2014$Order.Date<-convertCharDateToDate(ssds.2014$Order.Date)
 ssds.2013$Order.Date<-convertCharDateToDate(ssds.2013$Order.Date)
 ssds.2012$Order.Date<-convertCharDateToDate(ssds.2012$Order.Date)
@@ -124,7 +153,182 @@ ssds.2012$Ship.Date<-convertCharDateToDate(ssds.2012$Ship.Date)
 ssds.2011$Ship.Date<-convertCharDateToDate(ssds.2011$Ship.Date)
 
 ```
+
+binning categorical features
 ```{r}
-as.factor(ssds.2014$Ship.Mode)
+ssds.2014$Ship.Mode<-as.factor(ssds.2014$Ship.Mode)
 ```
+
+```{r}
+library(ggplot2)
+```
+
+Check the frequency of each level in Region_Code
+
+```{r}
+print("country")
+length(levels(ssds$Country))
+print("Segment")
+length(levels(ssds$Segment))
+print("City")
+length(levels(ssds$City))
+print("Region")
+length(levels(ssds$Region))
+print("State")
+length(levels(ssds$State))
+print("Market")
+length(levels(ssds$Market))
+print("Category")
+length(levels(ssds$Category))
+print("Sub.Category")
+length(levels(ssds$Sub.Category))
+print("Product.Name")
+length(levels(ssds$Product.Name))
+```
+
+```{r}
+head(ssds)
+```
+
+Correlation
+```{r}
+cor_result = rcorr(as.matrix(ssds%>%select(Sales, Quantity, Discount, Profit, Shipping.Cost)))
+corrplot(cor_result$r, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+```
+
+```{r}
+attach(ssds)
+barplot(table(Segment), main = 'Segment', ylab = 'Count', las = 1 )
+barplot(table(Ship.Mode), main = 'Ship.Mode', ylab = 'Count', las = 1 )
+barplot(table(City), main = 'City', ylab = 'Count', las = 1 )
+barplot(table(State), main = 'State', ylab = 'Count', las = 1 )
+barplot(table(Region), main = 'Region', ylab = 'Count', las = 1 )
+barplot(table(Sub.Category), main = 'Sub.Category', ylab = 'Count', las = 1 )
+barplot(table(Order.Priority), main = 'Order.Priority', ylab = 'Count', las = 1 )
+barplot(table(Product.ID), main='Product.ID', ylab='Count', las=1)
+
+```
+
+type of products
+```{r}
+str(as.factor(ssds$Product.ID))
+```
+
+
+```{r}
+head(ssds)
+```
+
+
+```{r}
+#install.packages("treemap", dependencies = TRUE)
+library(treemap)
+
+attach(ssds)
+seg.total.sales=data.frame(aggregate(Sales, by=list(Segment=Segment), FUN=sum))
+colnames(seg.total.sales)<- c("Segment","totalSales")
+print(seg.total.sales)
+ggplot() + geom_bar(data=seg.total.sales, aes(x=reorder(Segment, totalSales), y=totalSales), stat='identity')+ coord_flip()
+
+cit.total.sales=aggregate(Sales, by=list(City=City), FUN=sum)
+colnames(cit.total.sales)<- c("city","totalSales")
+attach(cit.total.sales)
+cit.total.sales=cit.total.sales[order(totalSales), ]
+print(cit.total.sales)
+cit.total.sales=cit.total.sales[400:443, ]
+ggplot() + geom_bar(data=cit.total.sales, aes(x=reorder(city, totalSales), y=totalSales), stat='identity')+ coord_flip()
+```
+
+
+```{r}
+attach(ssds)
+state.total.sales=aggregate(Sales, by=list(State=State), FUN=sum)
+colnames(state.total.sales)<- c("state","totalSales")
+print(state.total.sales)
+ggplot() + geom_bar(data=state.total.sales, aes(x=reorder(state, totalSales), y=totalSales), stat='identity')+ coord_flip()
+
+region.total.sales=aggregate(Sales, by=list(Region=Region), FUN=sum)
+colnames(region.total.sales)<- c("region","totalSales")
+print(region.total.sales)
+ggplot() + geom_bar(data=region.total.sales, aes(x=reorder(region, totalSales), y=totalSales), stat='identity')+ coord_flip()
+
+category.total.sales=aggregate(Sales, by=list(Category=Category), FUN=sum)
+colnames(category.total.sales)<- c("category","totalSales")
+print(category.total.sales)
+ggplot() + geom_bar(data=category.total.sales, aes(x=reorder(category, totalSales), y=totalSales), stat='identity')+ coord_flip()
+
+sub.cat.total.sales=aggregate(Sales, by=list(Segment=Sub.Category), FUN=sum)
+colnames(sub.cat.total.sales)<- c("sub.category","totalSales")
+print(sub.cat.total.sales)
+ggplot() + geom_bar(data=sub.cat.total.sales, aes(x=reorder(sub.category, totalSales), y=totalSales), stat='identity')+ coord_flip()
+
+order.priority.total.sales=aggregate(Sales, by=list(Segment=Order.Priority), FUN=sum)
+colnames(order.priority.total.sales)<- c("order.priority","totalSales")
+print(order.priority.total.sales)
+ggplot() + geom_bar(data=order.priority.total.sales, aes(x=reorder(order.priority, totalSales), y=totalSales), stat='identity')+ coord_flip()
+
+```
+```{r}
+
+sort(table(ssds$State), decreasing = TRUE)
+g1 = ggplot(ssds, aes(x=character(1), fill=State))+
+   geom_bar(width=1, colour="black")+
+   coord_polar(theta="y")+
+   theme_void()
+print(g1)
+
+```
+
+```{r}
+g2 = ggplot(ssds, aes(x=character(1), fill=Sub.Category))+
+   geom_bar(width=1, colour="black")+
+   coord_polar(theta="y")+
+   theme_void()
+print(g2)
+```
+
+
+```{r}
+str(ssds)
+```
+```{r}
+library(rpart)
+data.part = ssds
+data.part = data.part%>%select(-Product.Name, -Customer.Name, -Product.ID, -Profit)
+
+treeModel = rpart(Product.ID~., data.part)
+
+dt = data.frame(Importance=treeModel$variable.importance)
+print(dt)
+
+```
+
+data Sampling
+```{r}
+nd<-ssds
+```
+
+
+```{r}
+nd<-nd%>%select(Shipping.Cost, Sub.Category, City, Order.Priority, State, Ship.Mode, Quantity, Category, Sales)
+nd<-nd%>%
+    mutate_if(is.numeric, scale)
+
+
+sample_split = createDataPartition(nd$Sales, p = 0.8, list=FALSE)
+trainData = nd[sample_split,]
+testData = nd[-sample_split,]
+
+str(trainData)
+
+
+```
+
+
+```{r}
+
+
+
+```
+
 
